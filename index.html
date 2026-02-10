@@ -5,46 +5,37 @@
   <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <style>
+    /* CSS 스타일은 기존과 동일하므로 유지합니다 */
     body { font-family: 'Noto Sans KR', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
     .container { max-width: 600px; margin: 0 auto; padding-bottom: 80px; }
     .main-title { font-family: 'Do Hyeon', sans-serif; font-size: 3rem; color: #1a73e8; text-align: center; margin-top: 30px; }
-    
     .card { padding: 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; position: relative; border: 1px solid rgba(0,0,0,0.05); }
     .card h4 { margin: 0 0 10px 0; font-size: 1.2rem; padding-right: 60px; color: #333; }
     .card p { white-space: pre-wrap; margin-bottom: 15px; line-height: 1.6; color: #444; }
-    
     .card-actions { position: absolute; top: 15px; right: 10px; display: flex; gap: 5px; }
     button, .action-btn, .color-dot, .fab { transition: transform 0.1s ease; cursor: pointer; }
     button:active, .action-btn:active, .color-dot:active, .fab:active { transform: scale(0.9); }
-
     .action-btn { color: rgba(0,0,0,0.2); border: none; background: none; padding: 5px; display: flex; align-items: center; }
     .action-btn:hover { color: #1a73e8; }
-    
     .card-footer { font-size: 0.85rem; color: #70757a; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 10px; margin-top: 10px; }
     .comment-toggle-btn { display: flex; align-items: center; cursor: pointer; color: #5f6368; background: none; border: none; font-weight: bold; }
-
     .comment-area { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(0,0,0,0.1); }
     .comment-item { font-size: 0.85rem; margin-bottom: 8px; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(0,0,0,0.03); }
     .comment-content-text { flex: 1; margin-right: 10px; line-height: 1.4; }
     .comment-nick { font-weight: bold; margin-right: 6px; color: #1a73e8; }
-    
     .comment-btns { display: flex; gap: 8px; flex-shrink: 0; }
     .c-btn { font-size: 18px !important; cursor: pointer; opacity: 0.4; transition: 0.2s; }
     .c-btn:hover { opacity: 1; }
     .c-edit { color: #1a73e8; }
     .c-delete { color: #d93025; }
-
     .comment-input-group { display: flex; gap: 8px; margin-top: 12px; }
     .comment-input-group input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; }
-
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
     .modal-content { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 340px; box-sizing: border-box; }
     input, textarea { width: 100%; margin-bottom: 12px; padding: 12px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; outline: none; }
-    
     .btn-main { background: #1a73e8; color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; box-shadow: 0 4px 0 #1557b0; margin-bottom: 5px; }
     .btn-sub { background: #eee; border: none; padding: 12px; border-radius: 10px; width: 100%; box-shadow: 0 4px 0 #ccc; }
     .btn-main:active, .btn-sub:active { transform: translateY(4px); box-shadow: none; }
-
     .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background-color: #1a73e8; border-radius: 50%; color: white; font-size: 30px; border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); z-index: 999; }
   </style>
 </head>
@@ -90,6 +81,8 @@
   </div>
 
   <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzk7a9kDXOYFzMYuR9r-ww8KVoZUTAy34cNtYIg3JpQBAlokegLxf3WNL3m_4UVgQrVtQ/exec";
+
     let editingRowNum = null;
     let currentAction = null;
     let tempEditData = null;
@@ -102,7 +95,23 @@
       toggleModal('alert-modal', true);
     }
 
-    function loadList() { google.script.run.withSuccessHandler(renderList).getList(); }
+    // 공통 서버 통신 함수 (Fetch 사용)
+    async function callGAS(params) {
+      const queryString = new URLSearchParams(params).toString();
+      try {
+        const response = await fetch(`${GAS_URL}?${queryString}`);
+        return await response.json();
+      } catch (e) {
+        console.error("Error:", e);
+        showAlert("서버 통신 중 오류가 발생했습니다.");
+      }
+    }
+
+    // 리스트 불러오기
+    async function loadList() {
+      const res = await callGAS({ action: 'getList' });
+      renderList(res);
+    }
 
     function renderList(items) {
       const container = document.getElementById('list-container');
@@ -152,19 +161,18 @@
       area.style.display = area.style.display === 'block' ? 'none' : 'block';
     }
 
-    function addComment(rowNum) {
+    async function addComment(rowNum) {
       const nick = document.getElementById(`cnick-${rowNum}`).value || "익명";
       const text = document.getElementById(`ctxt-${rowNum}`).value;
       if (!text) { showAlert("내용을 입력해주세요."); return; }
       
       if (commentEditRowNum) {
-        google.script.run.withSuccessHandler(() => {
-          commentEditRowNum = null;
-          loadList();
-        }).updateComment(commentEditRowNum, nick, text);
+        await callGAS({ action: 'updateComment', row: commentEditRowNum, nickname: nick, content: text });
+        commentEditRowNum = null;
       } else {
-        google.script.run.withSuccessHandler(loadList).saveComment(rowNum, nick, text);
+        await callGAS({ action: 'saveComment', row: rowNum, nickname: nick, content: text });
       }
+      loadList();
     }
 
     function prepareEditComment(postId, commentRow, nick, text) {
@@ -175,12 +183,11 @@
       document.getElementById(`ctxt-${postId}`).focus();
     }
 
-    // 댓글 삭제 시 디자인 모달을 띄우는 함수
     function askDeleteComment(row) {
       editingRowNum = row;
       currentAction = 'deleteComment';
       document.getElementById('auth-title').innerText = "댓글을 삭제하시겠습니까?";
-      document.getElementById('confirm-pw').style.display = 'none'; // 비번창 숨김
+      document.getElementById('confirm-pw').style.display = 'none';
       toggleModal('auth-modal', true);
     }
 
@@ -198,32 +205,28 @@
       currentAction = action;
       tempEditData = itemData;
       document.getElementById('confirm-pw').value = '';
-      document.getElementById('confirm-pw').style.display = 'block'; // 비번창 보임
+      document.getElementById('confirm-pw').style.display = 'block';
       document.getElementById('auth-title').innerText = (action === 'delete') ? "삭제하시겠습니까?" : "수정하시겠습니까?";
       toggleModal('auth-modal', true);
     }
 
-    document.getElementById('auth-confirm-btn').onclick = function() {
+    document.getElementById('auth-confirm-btn').onclick = async function() {
       const pw = document.getElementById('confirm-pw').value;
       
-      // 댓글 삭제 처리
       if (currentAction === 'deleteComment') {
-        google.script.run.withSuccessHandler(function() {
-          toggleModal('auth-modal', false);
-          showAlert("댓글이 삭제되었습니다.");
-          loadList();
-        }).deleteComment(editingRowNum);
+        await callGAS({ action: 'deleteComment', row: editingRowNum });
+        toggleModal('auth-modal', false);
+        showAlert("댓글이 삭제되었습니다.");
+        loadList();
         return;
       }
 
-      // 게시글 수정/삭제 처리
-      google.script.run.withSuccessHandler(function(res) {
-        if(res.success) {
-          toggleModal('auth-modal', false);
-          if(currentAction === 'delete') { showAlert("삭제되었습니다."); loadList(); } 
-          else { openEditForm(tempEditData, pw); }
-        } else { showAlert("비밀번호가 틀렸습니다."); }
-      }).verifyAndAction(editingRowNum, pw, (currentAction === 'delete' ? 'delete' : 'check'));
+      const res = await callGAS({ action: 'verifyAndAction', row: editingRowNum, pw: pw, type: (currentAction === 'delete' ? 'delete' : 'check') });
+      if(res.success) {
+        toggleModal('auth-modal', false);
+        if(currentAction === 'delete') { showAlert("삭제되었습니다."); loadList(); } 
+        else { openEditForm(tempEditData, pw); }
+      } else { showAlert("비밀번호가 틀렸습니다."); }
     };
 
     function openEditForm(item, pw) {
@@ -236,7 +239,7 @@
       toggleModal('input-modal', true);
     }
 
-    function submitForm() {
+    async function submitForm() {
       const data = {
         nickname: document.getElementById('nickname').value || "익명",
         title: document.getElementById('title').value,
@@ -246,11 +249,15 @@
         rowNum: editingRowNum
       };
       if(!data.title || !data.content || !data.password) { showAlert("모든 칸을 채워주세요."); return; }
+      
       if(editingRowNum) {
-        google.script.run.withSuccessHandler(() => { showAlert("수정되었습니다."); loadList(); }).verifyAndAction(editingRowNum, data.password, 'update', data);
+        await callGAS({ action: 'verifyAndAction', row: editingRowNum, pw: data.password, type: 'update', data: JSON.stringify(data) });
+        showAlert("수정되었습니다.");
       } else {
-        google.script.run.withSuccessHandler(() => { showAlert("등록되었습니다."); loadList(); }).saveData(data);
+        await callGAS({ action: 'saveData', data: JSON.stringify(data) });
+        showAlert("등록되었습니다.");
       }
+      loadList();
       toggleModal('input-modal', false);
     }
   </script>
